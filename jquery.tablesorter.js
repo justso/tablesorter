@@ -20,15 +20,16 @@
  *
  * @example $('table').tablesorter({ sortList:[[0,0],[1,0]] });
  * @desc Create a tablesorter interface and sort on the first and secound column in ascending order.
+ *  
+ * @example $('table').tablesorter({ headers: { 0: { sorter: false}, 1: {sorter: false} } });
+ * @desc Create a tablesorter interface and disableing the first and second column headers.
  * 
- * @example $('table').tablesorter({ headers: { 0: { sorter: false}, 1: {sorter: false} } } });
- * @desc Create a tablesorter interface and disableing the first and secound column headers.
- * 
- * @example $('table').tablesorter({ headers: { 0: {sorter: "digit"}, 1: {sorter: "currency"} } });
- * @desc Create a tablesorter interface and set a column parser for the first and secound column.
+ * @example $('table').tablesorter({ headers: { 0: {sorter:"integer"}, 1: {sorter:"currency"} } });
+ * @desc Create a tablesorter interface and set a column parser for the first and second column.
  * 
  * 
  * @param Object settings An object literal containing key/value pairs to provide optional settings.
+ * 
  * 
  * @option String cssHeader (optional) 			A string of the class name to be appended to sortable tr elements in the thead of the table. 
  * 												Default value: "header"
@@ -61,8 +62,11 @@
  * @option Array sortForce (optional) 			An array containing forced sorting rules. 
  * 												This option let's you specify a default sorting rule, which is prepended to user-selected rules.
  * 												Default value: null
+ * 
+ * @option Boolean sortLocaleCompare (optional) Boolean flag indicating whatever to use String.localeCampare method or not. Default set to true.
  *  
-  * @option Array sortAppend (optional) 			An array containing forced sorting rules. 
+ *  
+ * @option Array sortAppend (optional) 			An array containing forced sorting rules. 
  * 												This option let's you specify a default sorting rule, which is appended to user-selected rules.
  * 												Default value: null
  * 
@@ -100,6 +104,7 @@
 				sortMultiSortKey: "shiftKey",
 				sortForce: null,
 				sortAppend: null,
+				sortLocaleCompare: true,
 				textExtraction: "simple",
 				parsers: {}, 
 				widgets: [],		
@@ -136,13 +141,16 @@
 				
 				if(table.config.debug) { var parsersDebug = ""; }
 				
+				if (table.tBodies.length == 0) return; //In the case of empty tables
+				
 				var rows = table.tBodies[0].rows;
 				
-				if(table.tBodies[0].rows[0]) {
+				if(rows[0]) { 
 
 					var list = [], cells = rows[0].cells, l = cells.length;
 					
 					for (var i=0;i < l; i++) {
+						
 						var p = false;
 						
 						if($.metadata && ($($headers[i]).metadata() && $($headers[i]).metadata().sorter)  ) {
@@ -154,6 +162,7 @@
 							p = getParserById(table.config.headers[i].sorter);
 						}
 						if(!p) {
+							
 							p = detectParserForColumn(table,rows, -1,i);
 						}
 	
@@ -190,9 +199,11 @@
 				// 0 is always the generic parser (text)
 				return parsers[0];
 			}
+			
 			function getNodeFromRowAndCellIndex(rows,rowIndex, cellIndex) {
 				return rows[rowIndex].cells[cellIndex];
 			}
+			
 			function trimAndGetNodeText(config, node) {
 				return $.trim(getElementText(config, node));
 			}
@@ -322,9 +333,12 @@
 			
 				//for(var i = 0; i < table.tHead.rows.length; i++) { tableHeadersRows[i]=0; };
 				
+				 var header_index = computeTableHeaderCellIndexes(table);
+				
 				$tableHeaders = $(table.config.selectorHeaders,table).each(function(index) {
-							
-					this.column = index;
+					
+					this.column = header_index[this.parentNode.rowIndex+"-"+this.cellIndex];		
+					//this.column = index;
 					this.order = formatSortingOrder(table.config.sortInitialOrder);
 					this.count = this.order;
 					
@@ -344,6 +358,50 @@
 				return $tableHeaders;
 				
 			};
+			
+			// from:
+			// http://www.javascripttoolbox.com/lib/table/examples.php
+			// http://www.javascripttoolbox.com/temp/table_cellindex.html
+			function computeTableHeaderCellIndexes(t) {
+				var matrix = [];
+				var lookup = {};
+				var thead = t.getElementsByTagName('THEAD')[0];
+				var trs = thead.getElementsByTagName('TR');
+			
+				for (var i=0; i<trs.length; i++) {
+				  var cells = trs[i].cells;
+				  for (var j=0; j<cells.length; j++) {
+					var c = cells[j];
+			
+					var rowIndex = c.parentNode.rowIndex;
+					var cellId = rowIndex+"-"+c.cellIndex;
+					var rowSpan = c.rowSpan || 1;
+					var colSpan = c.colSpan || 1
+					var firstAvailCol;
+					if(typeof(matrix[rowIndex])=="undefined") {
+					  matrix[rowIndex] = [];
+					}
+					// Find first available column in the first row
+					for (var k=0; k<matrix[rowIndex].length+1; k++) {
+					  if (typeof(matrix[rowIndex][k])=="undefined") {
+						firstAvailCol = k;
+						break;
+					  }
+					}
+					lookup[cellId] = firstAvailCol;
+					for (var k=rowIndex; k<rowIndex+rowSpan; k++) {
+					  if(typeof(matrix[k])=="undefined") {
+						matrix[k] = [];
+					  }
+					  var matrixrow = matrix[k];
+					  for (var l=firstAvailCol; l<firstAvailCol+colSpan; l++) {
+						matrixrow[l] = "x";
+					  }
+					}
+				  }
+				}
+				return lookup;
+			}
 						
 		   	function checkCellColSpan(table, rows, row) {
                 var arr = [], r = table.tHead.rows, c = r[row].cells;
@@ -393,11 +451,11 @@
 			};
 			
 			function formatSortingOrder(v) { 
-        if(typeof(v) != "Number") { 
-                return (v.toLowerCase() == "desc") ? 1 : 0; 
-        } else { 
-                return (v == 1) ? 1 : 0; 
-        } 
+			    if(typeof(v) != "Number") { 
+					return (v.toLowerCase() == "desc") ? 1 : 0; 
+			    } else { 
+					return (v == 1) ? 1 : 0; 
+			    } 
 			}
 			
 			function isValueInArray(v, a) {
@@ -516,9 +574,11 @@
 				return "b[" + i + "]-a[" + i + "];";
 			};
 			function sortText(a,b) {
+				if(table.config.sortLocaleCompare) return a.localeCompare(b);
 				return ((a < b) ? -1 : ((a > b) ? 1 : 0));
 			};
 			function sortTextDesc(a,b) {
+				if(table.config.sortLocaleCompare) return b.localeCompare(a);
 				return ((b < a) ? -1 : ((b > a) ? 1 : 0));
 			};	
 	 		function sortNumeric(a,b) {
