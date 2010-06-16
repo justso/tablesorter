@@ -13,7 +13,11 @@
 	<script type="text/javascript">
 	
 	$(function() {
-		$("table").tablesorter({debug: true})
+		$("table").tablesorter({debug: true, headers: {
+			3: {
+				lockedOrder: 1
+			}
+		}});
 		$("a.append").click(appendData);
 		
 		
@@ -75,18 +79,16 @@ Releasing the shift key and pressing a column will result in a one column sort.
 <table id="large" cellspacing="0" class="tablesorter">
 	
 	<thead>
-		 <tr>
-              <th colspan="2">One and Two</th>
-              <th rowspan="2">Three</th>
-				<th rowspan="2">Three</th>
-				<th rowspan="2">Three</th>
-              <th rowspan="2">Three</th>
-				<th rowspan="2">Three</th>
-           </tr>
 		<tr>
 			<th>Name</th>
+
 			<th>Major</th>
-			
+			<th>Sex</th>
+			<th>English</th>
+			<th>Japanese</th>
+			<th>Calculus</th>
+			<th>Geometry</th>
+
 		</tr>
 	</thead>
 	<tfoot>
