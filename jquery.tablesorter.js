@@ -848,7 +848,7 @@
             };
             this.formatFloat = function (s) {
             	// replace all commas with dot
-            	s = s.replace(/[,]/g, '.');
+            	if(s && s.replace) s = s.replace(/[,]/g, '.');
             	// parse the string to float
                 var i = parseFloat(s);
                 // if the formated float is not a number return 0
