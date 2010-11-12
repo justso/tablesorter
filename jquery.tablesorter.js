@@ -643,7 +643,7 @@
                 } else if (type == 'numeric' && direction == 'asc') {
                     return "(" + a + " === null && " + b + " === null) ? 0 :(" + a + " === null ? Number.POSITIVE_INFINITY : (" + b + " === null ? Number.NEGATIVE_INFINITY : " + a + " - " + b + "));";
                 } else if (type == 'numeric' && direction == 'desc') {
-                    return "(" + a + " === null && " + b + " === null) ? 0 :(" + a + " === null ? Number.POSITIVE_INFINITY : (" + b + " === null ? Number.NEGATIVE_INFINITY : " + b + " - " + a + "));";
+                    return "(" + b + " === null && " + a + " === null) ? 0 :(" + b + " === null ? Number.POSITIVE_INFINITY : (" + a + " === null ? Number.NEGATIVE_INFINITY : " + b + " - " + a + "));";
                 }
             };
 
@@ -847,7 +847,11 @@
                 widgets.push(widget);
             };
             this.formatFloat = function (s) {
+            	// replace all commas with dot
+            	s = s.replace(/[,]/g, '.');
+            	// parse the string to float
                 var i = parseFloat(s);
+                // if the formated float is not a number return 0
                 return (isNaN(i)) ? 0 : i;
             };
             this.formatInt = function (s) {
@@ -894,8 +898,10 @@
         id: "digit",
         is: function (s, table) {
             var c = table.config;
+            s = s.replace(/[,]/g, '.');
             return $.tablesorter.isDigit(s, c);
         }, format: function (s) {
+        	
             return $.tablesorter.formatFloat(s);
         }, type: "numeric"
     });
@@ -985,6 +991,7 @@
             return $.tablesorter.formatFloat(new Date(s).getTime());
         }, type: "numeric"
     });
+    
     ts.addParser({
         id: "time",
         is: function (s) {
@@ -993,6 +1000,7 @@
             return $.tablesorter.formatFloat(new Date("2000/01/01 " + s).getTime());
         }, type: "numeric"
     });
+    
     ts.addParser({
         id: "metadata",
         is: function (s) {
@@ -1003,6 +1011,18 @@
             return $(cell).metadata()[p];
         }, type: "numeric"
     });
+    
+    ts.addParser({  
+ 	   id: "scientific",  
+ 	   is: function(s) {
+ 	      return /^[-+]?[1-9]\.[0-9]+e[-]?[1-9][0-9]*$/.test($.trim(s));
+ 	   },  
+ 	   format: function(s) {
+ 	       return $.tablesorter.formatFloat(s);
+ 	   },
+ 	   type: "numeric"
+ 	});
+    
     // add default widgets
     ts.addWidget({
         id: "zebra",
